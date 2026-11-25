@@ -1,0 +1,148 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --panel: #111827;
+  --border: #1f2937;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --ok: #10b981;
+  --warn: #f59e0b;
+  --critical: #ef4444;
+  --accent: #38bdf8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+}
+
+.card-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 0.35rem;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 110px;
+  padding-top: 0.75rem;
+}
+
+.bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar {
+  width: 100%;
+  min-height: 4px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+.section {
+  margin-top: 1.5rem;
+}
+
+.section h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.rule-row,
+.snap-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+
+.rule-row:last-child,
+.snap-row:last-child {
+  border-bottom: none;
+}
+
+.badge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-ok {
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--ok);
+}
+
+.badge-warn {
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--warn);
+}
+
+.badge-critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--critical);
+}

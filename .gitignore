@@ -1,0 +1,10 @@
+node_modules/
+dist/
+web/dist/
+coverage/
+*.db
+*.db-shm
+*.db-wal
+.pulsedeck/
+.env
+.DS_Store

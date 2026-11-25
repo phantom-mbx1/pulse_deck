@@ -1,0 +1,27 @@
+name: Bug Report
+description: Report a reproducible bug in PulseDeck
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly and concisely.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `npm run dev -- ...`
+        2. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment (OS, Node.js version, PulseDeck version)
+      placeholder: "e.g., Windows 11 / Node v22.x / v0.1.0"
+    validations:
+      required: true
