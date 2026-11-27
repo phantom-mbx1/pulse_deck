@@ -257,7 +257,54 @@ async function runCli(): Promise<void> {
         }
       },
     );
+  
+  snapshotCmd
+    .command('show <name>')
+    .description('Display full details of a saved snapshot')
+    .option('--json', 'Output JSON')
+    .action((name: string, opts: { json?: boolean }) => {
+      const globalOpts = program.opts<{ dataDir?: string }>();
+      const config = loadConfig(globalOpts.dataDir);
+      const storage = new StorageRepository(config.dbPath);
 
+      try {
+        const trimmed = name.trim();
+        const snap = storage.getSnapshotByName(trimmed);
+        if (!snap) {
+          throw new Error(`Snapshot "${trimmed}" not found.`);
+        }
+
+        if (opts.json) {
+          console.log(JSON.stringify(snap, null, 2));
+          return;
+        }
+
+        console.log(`Snapshot: ${snap.name}`);
+        console.log(`Created:  ${snap.createdAt}`);
+        if (snap.notes) {
+          console.log(`Notes:    ${snap.notes}`);
+        }
+        console.log(
+          `Host:     ${snap.sample.hostname} (${snap.sample.platform}/${snap.sample.arch})`,
+        );
+        console.log(`Uptime:   ${snap.sample.uptimeSeconds}s`);
+        console.log(
+          `CPU:      ${snap.sample.cpu.usagePercent}% (${snap.sample.cpu.coreCount} cores, load ${snap.sample.cpu.loadAvg.join(', ')})`,
+        );
+        console.log(
+          `Memory:   ${snap.sample.memory.usedPercent}% (${formatBytes(snap.sample.memory.usedBytes)} / ${formatBytes(snap.sample.memory.totalBytes)})`,
+        );
+        if (snap.sample.processes.length > 0) {
+          console.log('Top Processes (by memory):');
+          for (const proc of snap.sample.processes.slice(0, 5)) {
+            console.log(`  - PID ${proc.pid}: ${proc.name} (${formatBytes(proc.memoryBytes ?? 0)})`);
+          }
+        }
+      } finally {
+        storage.close();
+      }
+    });
+    
   const rulesCmd = program.command('rules').description('Evaluate threshold rules');
 
   rulesCmd
