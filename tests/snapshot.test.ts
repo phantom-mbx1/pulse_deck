@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeSnapshotDiff, createSnapshotRecord } from '../src/core/snapshot.js';
+import {
+  computeSnapshotDiff,
+  createSnapshotRecord,
+  formatSnapshotDiffMarkdown,
+} from '../src/core/snapshot.js';
 import type { TelemetrySample } from '../src/core/types.js';
 
 function buildSample(cpu: number, memUsed: number, uptime: number): TelemetrySample {
@@ -22,7 +26,7 @@ function buildSample(cpu: number, memUsed: number, uptime: number): TelemetrySam
 }
 
 describe('snapshot helpers', () => {
-  it('validates snapshot names and calculates diffs accurately', () => {
+  it('validates snapshot names, calculates diffs, and formats Markdown', () => {
     expect(() => createSnapshotRecord('invalid name!', buildSample(10, 500, 10))).toThrow();
 
     const s1 = createSnapshotRecord('snap-1', buildSample(20, 500, 100));
@@ -33,5 +37,10 @@ describe('snapshot helpers', () => {
     expect(diff.memoryUsedBytesDelta).toBe(400);
     expect(diff.memoryUsedPercentDelta).toBe(20);
     expect(diff.uptimeDeltaSeconds).toBe(45);
+
+    const md = formatSnapshotDiffMarkdown(diff);
+    expect(md).toContain('## Snapshot Diff: `snap-1` -> `snap-2`');
+    expect(md).toContain('| CPU Usage | +15% |');
+    expect(md).toContain('| Memory Used (%) | +20% |');
   });
 });

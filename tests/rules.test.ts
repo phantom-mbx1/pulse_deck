@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateRule, evaluateRules, hasBreachedRules } from '../src/core/rules.js';
+import {
+  applyRuleOverrides,
+  evaluateRule,
+  evaluateRules,
+  hasBreachedRules,
+} from '../src/core/rules.js';
 import type { RuleDefinition, TelemetrySample } from '../src/core/types.js';
 
 const sampleBase: TelemetrySample = {
@@ -41,12 +46,18 @@ describe('rules evaluator', () => {
     },
   ];
 
-  it('evaluates healthy vs warning thresholds accurately', () => {
+  it('evaluates healthy vs warning thresholds and supports overrides', () => {
     const cpuRes = evaluateRule(rules[0]!, sampleBase);
     expect(cpuRes.status).toBe('ok');
 
     const evals = evaluateRules(rules, sampleBase);
     expect(evals[1]?.status).toBe('warn');
     expect(hasBreachedRules(evals)).toBe(true);
+
+    const overridden = applyRuleOverrides(rules, { warn: 40, critical: 85 });
+    const overriddenEvals = evaluateRules(overridden, sampleBase);
+    expect(overriddenEvals[0]?.status).toBe('warn');
+    expect(overriddenEvals[1]?.status).toBe('critical');
+    expect(() => applyRuleOverrides(rules, { warn: 95, critical: 50 })).toThrow();
   });
 });

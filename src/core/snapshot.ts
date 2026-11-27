@@ -73,3 +73,35 @@ export function captureAndStoreSnapshot(
   storage.saveSnapshot(snapshot);
   return snapshot;
 }
+
+function formatSignedNumber(value: number, suffix = ''): string {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value}${suffix}`;
+}
+
+function formatSignedBytes(bytes: number): string {
+  const sign = bytes > 0 ? '+' : bytes < 0 ? '-' : '';
+  const abs = Math.abs(bytes);
+  const gb = abs / (1024 * 1024 * 1024);
+  if (gb >= 1) {
+    return `${sign}${gb.toFixed(2)} GB`;
+  }
+  const mb = abs / (1024 * 1024);
+  return `${sign}${mb.toFixed(1)} MB`;
+}
+
+export function formatSnapshotDiffMarkdown(diff: SnapshotDiff): string {
+  return [
+    `## Snapshot Diff: \`${diff.baseName}\` -> \`${diff.targetName}\``,
+    '',
+    `- **Base Timestamp:** ${diff.baseTimestamp}`,
+    `- **Target Timestamp:** ${diff.targetTimestamp}`,
+    '',
+    '| Metric | Delta |',
+    '| :--- | :--- |',
+    `| CPU Usage | ${formatSignedNumber(diff.cpuUsageDeltaPercent, '%')} |`,
+    `| Memory Used (%) | ${formatSignedNumber(diff.memoryUsedPercentDelta, '%')} |`,
+    `| Memory Used (Bytes) | ${formatSignedBytes(diff.memoryUsedBytesDelta)} |`,
+    `| Uptime | ${formatSignedNumber(diff.uptimeDeltaSeconds, 's')} |`,
+  ].join('\n');
+}

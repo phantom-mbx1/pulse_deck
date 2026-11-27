@@ -2,8 +2,12 @@
 import { Command } from 'commander';
 import { collectTelemetrySample } from '../core/collector.js';
 import { loadConfig } from '../core/config.js';
-import { evaluateRules, hasBreachedRules } from '../core/rules.js';
-import { captureAndStoreSnapshot, computeSnapshotDiff } from '../core/snapshot.js';
+import { applyRuleOverrides, evaluateRules, hasBreachedRules } from '../core/rules.js';
+import {
+  captureAndStoreSnapshot,
+  computeSnapshotDiff,
+  formatSnapshotDiffMarkdown,
+} from '../core/snapshot.js';
 import { StorageRepository } from '../core/storage.js';
 import { createPulseDeckServer } from '../server/app.js';
 
@@ -63,8 +67,7 @@ async function runCli(): Promise<void> {
       }
     });
 
-
-    program
+  program
     .command('watch')
     .description('Continuously sample and display host telemetry')
     .option('--interval <seconds>', 'Sampling interval in seconds', (v) => Number(v), 2)
@@ -178,56 +181,104 @@ async function runCli(): Promise<void> {
     });
 
   snapshotCmd
-    .command('diff <base> <target>')
-    .description('Compare two saved snapshots')
+    .command('delete <name>')
+    .description('Delete a saved snapshot by name')
     .option('--json', 'Output JSON')
-    .action(async (baseName: string, targetName: string, opts: { json?: boolean }) => {
+    .action((name: string, opts: { json?: boolean }) => {
       const globalOpts = program.opts<{ dataDir?: string }>();
       const config = loadConfig(globalOpts.dataDir);
       const storage = new StorageRepository(config.dbPath);
 
       try {
-        const base = storage.getSnapshotByName(baseName);
-        const target = storage.getSnapshotByName(targetName);
-        if (!base) {
-          throw new Error(`Snapshot "${baseName}" not found.`);
-        }
-        if (!target) {
-          throw new Error(`Snapshot "${targetName}" not found.`);
+        const trimmed = name.trim();
+        const deleted = storage.deleteSnapshotByName(trimmed);
+        if (!deleted) {
+          throw new Error(`Snapshot "${trimmed}" not found.`);
         }
 
-        const diff = computeSnapshotDiff(base, target);
         if (opts.json) {
-          console.log(JSON.stringify(diff, null, 2));
+          console.log(JSON.stringify({ deleted: true, name: trimmed }, null, 2));
           return;
         }
-
-        console.log(`Diff: ${diff.baseName} -> ${diff.targetName}`);
-        console.log(`  CPU Delta: ${diff.cpuUsageDeltaPercent >= 0 ? '+' : ''}${diff.cpuUsageDeltaPercent}%`);
-        console.log(
-          `  Memory % Delta: ${diff.memoryUsedPercentDelta >= 0 ? '+' : ''}${diff.memoryUsedPercentDelta}% (${diff.memoryUsedBytesDelta >= 0 ? '+' : ''}${formatBytes(diff.memoryUsedBytesDelta)})`,
-        );
-        console.log(`  Uptime Delta: ${diff.uptimeDeltaSeconds >= 0 ? '+' : ''}${diff.uptimeDeltaSeconds}s`);
+        console.log(`Snapshot "${trimmed}" deleted.`);
       } finally {
         storage.close();
       }
     });
+
+  snapshotCmd
+    .command('diff <base> <target>')
+    .description('Compare two saved snapshots')
+    .option('--format <mode>', 'Output format: text, json, or markdown', 'text')
+    .option('--json', 'Output raw JSON (shorthand for --format json)')
+    .action(
+      async (baseName: string, targetName: string, opts: { format?: string; json?: boolean }) => {
+        const globalOpts = program.opts<{ dataDir?: string }>();
+        const config = loadConfig(globalOpts.dataDir);
+        const storage = new StorageRepository(config.dbPath);
+
+        try {
+          const base = storage.getSnapshotByName(baseName);
+          const target = storage.getSnapshotByName(targetName);
+          if (!base) {
+            throw new Error(`Snapshot "${baseName}" not found.`);
+          }
+          if (!target) {
+            throw new Error(`Snapshot "${targetName}" not found.`);
+          }
+
+          const diff = computeSnapshotDiff(base, target);
+          const mode = opts.json ? 'json' : (opts.format ?? 'text').toLowerCase();
+
+          if (mode === 'json') {
+            console.log(JSON.stringify(diff, null, 2));
+            return;
+          }
+          if (mode === 'markdown' || mode === 'md') {
+            console.log(formatSnapshotDiffMarkdown(diff));
+            return;
+          }
+          if (mode !== 'text') {
+            throw new Error(`Unsupported diff format "${opts.format}". Use text, json, or markdown.`);
+          }
+
+          console.log(`Diff: ${diff.baseName} -> ${diff.targetName}`);
+          console.log(
+            `  CPU Delta: ${diff.cpuUsageDeltaPercent >= 0 ? '+' : ''}${diff.cpuUsageDeltaPercent}%`,
+          );
+          console.log(
+            `  Memory % Delta: ${diff.memoryUsedPercentDelta >= 0 ? '+' : ''}${diff.memoryUsedPercentDelta}% (${diff.memoryUsedBytesDelta >= 0 ? '+' : ''}${formatBytes(diff.memoryUsedBytesDelta)})`,
+          );
+          console.log(
+            `  Uptime Delta: ${diff.uptimeDeltaSeconds >= 0 ? '+' : ''}${diff.uptimeDeltaSeconds}s`,
+          );
+        } finally {
+          storage.close();
+        }
+      },
+    );
 
   const rulesCmd = program.command('rules').description('Evaluate threshold rules');
 
   rulesCmd
     .command('check')
     .description('Evaluate configured threshold rules against current telemetry')
+    .option('--warn <number>', 'Override warning threshold (0-100)', (v) => Number(v))
+    .option('--critical <number>', 'Override critical threshold (0-100)', (v) => Number(v))
     .option('--json', 'Output JSON')
-    .action(async (opts: { json?: boolean }) => {
+    .action(async (opts: { warn?: number; critical?: number; json?: boolean }) => {
       const globalOpts = program.opts<{ dataDir?: string }>();
       const config = loadConfig(globalOpts.dataDir);
       const storage = new StorageRepository(config.dbPath);
 
       try {
+        const activeRules = applyRuleOverrides(config.rules, {
+          ...(opts.warn !== undefined ? { warn: opts.warn } : {}),
+          ...(opts.critical !== undefined ? { critical: opts.critical } : {}),
+        });
         const sample = await collectTelemetrySample(false);
         storage.saveSample(sample);
-        const evaluations = evaluateRules(config.rules, sample);
+        const evaluations = evaluateRules(activeRules, sample);
         const breached = hasBreachedRules(evaluations);
 
         if (opts.json) {

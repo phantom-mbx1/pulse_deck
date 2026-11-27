@@ -147,6 +147,13 @@ export class StorageRepository {
     });
   }
 
+
+  deleteSnapshotByName(name: string): boolean {
+    const stmt = this.db.prepare('DELETE FROM snapshots WHERE name = ?');
+    const result = stmt.run(name);
+    return Number(result.changes ?? 0) > 0;
+  }
+
   close(): void {
     this.db.close();
   }

@@ -14,7 +14,12 @@ function makeTempDb(): string {
   return path.join(dir, 'test.db');
 }
 
-function makeSample(id: string, cpuPercent: number, memUsedBytes: number, uptime: number): TelemetrySample {
+function makeSample(
+  id: string,
+  cpuPercent: number,
+  memUsedBytes: number,
+  uptime: number,
+): TelemetrySample {
   const totalBytes = 1000;
   return {
     id,
@@ -44,7 +49,7 @@ afterEach(() => {
 });
 
 describe('StorageRepository and Snapshot diffing', () => {
-  it('persists samples, saves snapshots, rejects duplicates, and computes diffs', () => {
+  it('persists samples, saves/deletes snapshots, rejects duplicates, and computes diffs', () => {
     const dbPath = makeTempDb();
     const repo = new StorageRepository(dbPath);
 
@@ -66,6 +71,10 @@ describe('StorageRepository and Snapshot diffing', () => {
       expect(diff.memoryUsedBytesDelta).toBe(300);
       expect(diff.memoryUsedPercentDelta).toBe(30);
       expect(diff.uptimeDeltaSeconds).toBe(60);
+
+      expect(repo.deleteSnapshotByName('before-load')).toBe(true);
+      expect(repo.deleteSnapshotByName('before-load')).toBe(false);
+      expect(repo.getSnapshotByName('before-load')).toBeNull();
     } finally {
       repo.close();
     }
