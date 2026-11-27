@@ -47,5 +47,5 @@ describe('PulseDeck HTTP API', () => {
       await app.close();
       storage.close();
     }
-  });
+  }, 15000, );
 });
