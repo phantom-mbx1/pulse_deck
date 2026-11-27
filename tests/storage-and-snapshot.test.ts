@@ -75,6 +75,12 @@ describe('StorageRepository and Snapshot diffing', () => {
       expect(repo.deleteSnapshotByName('before-load')).toBe(true);
       expect(repo.deleteSnapshotByName('before-load')).toBe(false);
       expect(repo.getSnapshotByName('before-load')).toBeNull();
+
+      const loaded = repo.getSnapshotByName('under-load');
+      expect(loaded).not.toBeNull();
+      expect(loaded?.name).toBe('under-load');
+      expect(loaded?.sample.cpu.usagePercent).toBe(55);
+      expect(repo.getSnapshotByName('missing-snap')).toBeNull();
     } finally {
       repo.close();
     }
