@@ -31,6 +31,7 @@ export interface TelemetrySample {
   uptimeSeconds: number;
   cpu: CpuMetrics;
   memory: MemoryMetrics;
+  disk?: DiskMetrics;
   processes: ProcessSummary[];
 }
 
@@ -91,4 +92,12 @@ export function clampPercent(value: number): number {
     return 0;
   }
   return Math.max(0, Math.min(100, Number(value.toFixed(2))));
+}
+
+export interface DiskMetrics {
+  mountPath: string;
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  usedPercent: number;
 }

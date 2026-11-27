@@ -2,7 +2,30 @@ import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import { promisify } from 'node:util';
-import { clampPercent, type ProcessSummary, type TelemetrySample } from './types.js';
+import { clampPercent, DiskMetrics, type ProcessSummary, type TelemetrySample } from './types.js';
+
+import { statfs } from 'node:fs/promises';
+import { describe, expect, it } from 'vitest';
+import { collectDiskMetrics, collectTelemetrySample } from '../src/core/collector.js';
+
+describe('collectTelemetrySample', () => {
+  it('collects valid CPU, memory, and optional disk metrics', async () => {
+    const sample = await collectTelemetrySample(false);
+    expect(sample.cpu.coreCount).toBeGreaterThan(0);
+    expect(sample.memory.totalBytes).toBeGreaterThan(0);
+    expect(sample.memory.usedPercent).toBeGreaterThanOrEqual(0);
+    expect(sample.memory.usedPercent).toBeLessThanOrEqual(100);
+
+    const disk = await collectDiskMetrics();
+    if (disk) {
+      expect(disk.totalBytes).toBeGreaterThan(0);
+      expect(disk.freeBytes).toBeGreaterThanOrEqual(0);
+      expect(disk.usedPercent).toBeGreaterThanOrEqual(0);
+      expect(disk.usedPercent).toBeLessThanOrEqual(100);
+    }
+  });
+});
+//import type { CpuMetrics, DiskMetrics, MemoryMetrics, ProcessSummary, TelemetrySample } from './types.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -107,6 +130,7 @@ export async function collectTelemetrySample(includeProcesses = true): Promise<T
     }
   }
 
+  const disk = await collectDiskMetrics();
   const processes = includeProcesses ? await collectTopProcesses(8) : [];
 
   return {
@@ -127,6 +151,67 @@ export async function collectTelemetrySample(includeProcesses = true): Promise<T
       freeBytes,
       usedPercent,
     },
+    ...(disk ? { disk } : {}),
     processes,
   };
+
+  const [cpu, memory, disk, processes] = await Promise.all([
+  collectCpuMetrics(),
+  Promise.resolve(collectMemoryMetrics()),
+  collectDiskMetrics(),
+  includeProcesses ? collectTopProcesses() : Promise.resolve([]),
+]);
+
+return {
+  id: crypto.randomUUID(),
+  timestamp: new Date().toISOString(),
+  hostname: os.hostname(),
+  platform: os.platform(),
+  arch: os.arch(),
+  uptimeSeconds: Math.floor(os.uptime()),
+  cpu,
+  memory,
+  ...(disk ? { disk } : {}),
+  processes,
+};
+  
+
+}
+
+export async function collectDiskMetrics(): Promise<DiskMetrics | undefined> {
+  const mountPath = process.platform === 'win32' ? 'C:\\' : '/';
+  try {
+    const stats = await statfs(mountPath);
+    const blockSize = Number(stats.bsize);
+    const totalBlocks = Number(stats.blocks);
+    const availBlocks = Number(stats.bavail);
+
+    if (!Number.isFinite(blockSize) || blockSize <= 0 || !Number.isFinite(totalBlocks) || totalBlocks <= 0) {
+      return undefined;
+    }
+
+    const totalBytes = Math.round(blockSize * totalBlocks);
+    const freeBytes = Math.max(0, Math.round(blockSize * Math.max(0, availBlocks)));
+    const usedBytes = Math.max(0, totalBytes - freeBytes);
+    const usedPercent = totalBytes > 0 ? Number(((usedBytes / totalBytes) * 100).toFixed(2)) : 0;
+
+    return {
+      mountPath,
+      totalBytes,
+      freeBytes,
+      usedBytes,
+      usedPercent,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function collectCpuMetrics(): any {
+  throw new Error('Function not implemented.');
+}
+
+
+function collectMemoryMetrics(): any {
+  throw new Error('Function not implemented.');
 }
