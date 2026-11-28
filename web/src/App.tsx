@@ -106,21 +106,51 @@ export function App() {
         </div>
       </div>
 
-      <div className="card section">
-        <h2>Recent CPU History ({history.length} samples)</h2>
-        <div className="bars" aria-label="Recent CPU utilization history">
-          {history.length === 0 ? (
-            <div className="muted">No samples yet. Run `pulsedeck status` or `pulsedeck watch`.</div>
-          ) : (
-            history.map((item) => (
-              <div key={item.id} className="bar-col" title={`${item.timestamp}: ${item.cpu.usagePercent}%`}>
+      <div className="grid section">
+        <div className="card">
+          <h2>Recent CPU History ({history.length} samples)</h2>
+          <div className="bars" aria-label="Recent CPU utilization history">
+            {history.length === 0 ? (
+              <div className="muted">No samples yet. Run `pulsedeck status` or `pulsedeck watch`.</div>
+            ) : (
+              history.map((item) => (
                 <div
-                  className="bar"
-                  style={{ height: `${Math.max(4, Math.min(100, item.cpu.usagePercent))}%` }}
-                />
-              </div>
-            ))
-          )}
+                  key={item.id}
+                  className="bar-col"
+                  title={`${item.timestamp}: ${item.cpu.usagePercent}%`}
+                >
+                  <div
+                    className="bar"
+                    style={{ height: `${Math.max(4, Math.min(100, item.cpu.usagePercent))}%` }}
+                    aria-label={`CPU ${item.cpu.usagePercent}% at ${item.timestamp}`}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>Recent Memory History ({history.length} samples)</h2>
+          <div className="bars" aria-label="Recent memory utilization history">
+            {history.length === 0 ? (
+              <div className="muted">No samples yet. Run `pulsedeck status` or `pulsedeck watch`.</div>
+            ) : (
+              history.map((item) => (
+                <div
+                  key={item.id}
+                  className="bar-col"
+                  title={`${item.timestamp}: ${item.memory.usedPercent}%`}
+                >
+                  <div
+                    className="bar bar-memory"
+                    style={{ height: `${Math.max(4, Math.min(100, item.memory.usedPercent))}%` }}
+                    aria-label={`Memory ${item.memory.usedPercent}% at ${item.timestamp}`}
+                  />
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 

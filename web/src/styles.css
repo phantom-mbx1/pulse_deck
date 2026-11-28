@@ -9,6 +9,7 @@
   --warn: #f59e0b;
   --critical: #ef4444;
   --accent: #38bdf8;
+  --memory-accent: #34d399;
 }
 
 * {
@@ -98,6 +99,10 @@ header h1 {
   min-height: 4px;
   background: var(--accent);
   border-radius: 3px 3px 0 0;
+}
+
+.bar-memory {
+  background: var(--memory-accent);
 }
 
 .section {
